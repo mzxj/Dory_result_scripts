@@ -1,2 +1,2 @@
-# Dory_result_scripts
-Dory Manuscript Results and Figures Generation Code
+# Dory Manuscript Results and Figures Generation Code
+This repository contains the source data and plotting scripts used in the Dory manuscript.
