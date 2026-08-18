@@ -1,0 +1,107 @@
+data0 <- read.table(paste0("SourceData/DiffScore/DiffScore_onechr_ErythroblastBT0VSProerythroblastBT0.tsv"), header = TRUE)
+
+df_list <- vector("list", 1000)
+for(i in 0:1000){
+  data <- read.table(paste0("SourceData/DiffScore/DiffScore_onechr_ErythroblastBT", i, "VSProerythroblastBT", i, ".tsv"), header = TRUE)
+  colnames(data)[3] <- paste0("DiffScore_", i)
+  df_list[[i+1]] <- data
+}
+
+combined_data <- Reduce(function(x, y) merge(x, y, by = c("regionID1", "regionID2"), all = TRUE),
+                        df_list)
+
+combined_data_no0 <- combined_data[, -3]
+
+score_cols <- grep("^DiffScore_", colnames(combined_data_no0))
+score_mat <- as.matrix(combined_data_no0[, score_cols])
+# row-wise 90% CI
+ci_mat <- t(apply(score_mat, 1, function(x) {
+  quantile(x, probs = c(0.05, 0.95), na.rm = TRUE)
+}))
+
+# add to dataframe
+combined_data$CI_lower_90 <- ci_mat[, 1]
+combined_data$CI_upper_90 <- ci_mat[, 2]
+
+data90 <- combined_data[, 1:3]
+
+data90$CI_lower_90 <- ci_mat[, 1]
+data90$CI_upper_90 <- ci_mat[, 2]
+data90sort <- data90[order(data90$DiffScore_0, decreasing = TRUE), ]
+
+
+library(ggplot2)
+data90sort$row_id <- seq_len(nrow(data90sort))
+
+pbar <- ggplot(data90sort, aes(x = as.numeric(row_id), y = DiffScore_0)) +
+  geom_errorbar(aes(ymin = CI_lower_90, ymax = CI_upper_90),
+                width = 0, linewidth = 0.2, alpha = 0.3) +
+  geom_point(size = 0.5, color="red") +
+  theme_bw() +
+  geom_hline(yintercept = 0, linetype = "solid")+
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed")+
+  geom_hline(yintercept = log10(0.05), linetype = "dashed")+
+  labs(x = "Region pairs ID", y = "DiffScore", title = "DiffScore with 90% CI")+
+  theme(panel.background = element_rect(fill = "transparent", colour = NA),
+        plot.background  = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_rect(fill = "transparent", colour = NA),
+        legend.key        = element_rect(fill = "transparent", colour = NA),
+        text=element_text(size=9),
+        plot.title = element_text(size = 10),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+ggsave("BootBar.png",pbar, dpi = 600, width = 6.5, height = 3.5)
+
+
+thrddata <- data90sort[which(data90sort$DiffScore_0 < log10(0.05)),]
+length(which(data90sort$CI_upper_90< 0))
+thrddata <- data90sort[which(data90sort$DiffScore_0 > -log10(0.05)),]
+length(which(data90sort$CI_lower_90 > 0))
+
+
+library(ggvenn)
+library(ggplot2)
+
+set_diffscore <- data90sort$row_id[data90sort$DiffScore_0 > -log10(0.05)]
+set_ci_lower  <- data90sort$row_id[data90sort$CI_lower_90 > 0]
+
+venn_list <- list(
+  "DRP_greater" = set_diffscore,
+  "Stable positive" = set_ci_lower
+)
+
+pp <- ggvenn(
+  venn_list,
+  fill_color = c("#3182BD", "#9ECAE1"),   # 两个圆的填充色
+  stroke_size = 0.4,
+  set_name_size = 5,
+  text_size = 5,
+  show_percentage = FALSE
+)+scale_y_continuous(expand = expansion(mult = c(0.1, 0.2))) + 
+  scale_x_continuous(expand = expansion(mult = c(0.1, 0.1)))
+ggsave("BootPos.png",pp, dpi = 600, width = 3.5, height = 2.8)
+
+
+
+set_diffscore <- data90sort$row_id[data90sort$DiffScore_0 < log10(0.05)]
+set_ci_lower  <- data90sort$row_id[data90sort$CI_upper_90 < 0]
+
+venn_list <- list(
+  "DRP_smaller" = set_diffscore,
+  "Stable negative" = set_ci_lower
+)
+
+pn <-ggvenn(
+  venn_list,
+  fill_color = c("#DE2D26", "#FCAE91"),   # 两个圆的填充色
+  stroke_size = 0.4,
+  set_name_size = 5,
+  text_size = 5,
+  show_percentage = FALSE
+)+scale_y_continuous(expand = expansion(mult = c(0.1, 0.2))) + 
+  scale_x_continuous(expand = expansion(mult = c(0.1, 0.1)))
+ggsave("BootNeg.png",pn, dpi = 600, width = 3.5, height = 2.8)
+
+
+
+

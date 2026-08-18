@@ -1,0 +1,14 @@
+
+Bcl6
+Chrm2
+Klf1
+Klf4
+Klf5
+Mecp2
+Nanog
+Polr2a
+Polr3d
+Six4
+Smc1a
+Tfap2c
+Znf384

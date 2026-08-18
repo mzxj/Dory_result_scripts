@@ -1,0 +1,17 @@
+
+Bcl11b
+Brd2
+Brd4
+C17orf96
+Cbfb
+E2f1
+H2az
+Ino80
+Kdm4b
+Kdm4c
+Polr2a
+Pou5f1
+Rad21
+Tcf12
+Tet1
+Yy1
